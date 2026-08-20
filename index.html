@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fight Card</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fight Card">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+
+<style>
+  :root{
+    --bg: #0B0B0C;
+    --bg-raised: #151517;
+    --bg-raised-2: #1B1B1E;
+    --line: #232326;
+    --red: #E8352B;
+    --white: #F5F3EE;
+    --grey: #8C8B90;
+    --grey-dim: #57565B;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; background:var(--bg); color:var(--white);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  body{ padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  header{
+    padding: 26px 20px 16px; border-bottom: 1px solid var(--line);
+    position: sticky; top:0; background: rgba(11,11,12,0.92); backdrop-filter: blur(10px); z-index: 10;
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  .brand .eyebrow{ font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--red); font-weight:700; }
+  .brand h1{ margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em; }
+  #refresh{
+    background:none; border:1px solid var(--line); color:var(--grey); font-size:12px;
+    padding:8px 12px; border-radius:100px; display:flex; align-items:center; gap:6px;
+  }
+  #refresh svg{ width:13px; height:13px; }
+
+  main{ padding: 4px 16px 60px; max-width:640px; margin:0 auto; }
+  .status{ padding: 40px 20px; text-align:center; color:var(--grey); font-size:14px; }
+  .status.error{ color: var(--red); }
+
+  .section-label{
+    font-size:11px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--grey-dim); margin: 26px 4px 10px;
+  }
+  .section-label.today{ color:var(--red); }
+
+  .card{
+    background: var(--bg-raised); border:1px solid var(--line); border-radius:16px;
+    margin: 10px 0; overflow:hidden;
+  }
+  .card .top{ padding: 16px 18px 12px; border-bottom:1px solid var(--line); }
+  .badge{
+    display:inline-block; font-size:10px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--red); background: rgba(232,53,43,0.12); padding: 3px 8px; border-radius:6px; margin-bottom:8px;
+  }
+  .headline{ font-size:19px; font-weight:800; letter-spacing:-0.01em; line-height:1.25; margin:0 0 10px; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap: 14px; font-size:13px; color:var(--grey); }
+  .meta-row .item{ display:flex; align-items:center; gap:6px; }
+  .meta-row svg{ width:14px; height:14px; flex-shrink:0; opacity:0.7; }
+
+  .bouts{ padding: 6px 8px; }
+  .bout-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding: 12px 10px; border-radius:10px; cursor:pointer;
+  }
+  .bout-row:active{ background: var(--bg-raised-2); }
+  .bout-row + .bout-row{ border-top: 1px solid var(--line); }
+  .bout-names{ font-size:14.5px; font-weight:700; line-height:1.3; }
+  .bout-class{ font-size:11px; color:var(--grey-dim); margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .chevron{ color:var(--grey-dim); flex-shrink:0; }
+  .chevron svg{ width:16px; height:16px; }
+
+  footer{ text-align:center; padding: 20px; color:var(--grey-dim); font-size:11px; }
+
+  .overlay{
+    position:fixed; inset:0; background: rgba(0,0,0,0.6); z-index:100;
+    display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition: opacity 0.25s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .sheet{
+    background: var(--bg-raised); width:100%; max-height:85vh; overflow-y:auto;
+    border-radius: 20px 20px 0 0; border:1px solid var(--line); border-bottom:none;
+    transform: translateY(20px); transition: transform 0.25s ease;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .overlay.open .sheet{ transform: translateY(0); }
+  .sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:100px; margin: 10px auto 4px; }
+  .sheet-header{
+    display:flex; justify-content:space-between; align-items:center; padding: 10px 18px 14px; border-bottom:1px solid var(--line);
+  }
+  .sheet-header .bout-class{ margin:0; }
+  #closeSheet{ background:none; border:none; color:var(--grey); font-size:15px; padding:6px; }
+
+  .fighters{ display:grid; grid-template-columns:1fr 1fr; gap:0; }
+  .fighter-col{ padding: 18px 16px; }
+  .fighter-col + .fighter-col{ border-left:1px solid var(--line); }
+  .fighter-name{ font-size:16px; font-weight:800; margin-bottom:2px; }
+  .fighter-nick{ font-size:12px; color:var(--grey); margin-bottom:14px; font-style:italic; }
+  .stat-row{ display:flex; justify-content:space-between; font-size:12.5px; padding: 6px 0; border-bottom:1px dashed var(--line); color:var(--grey); }
+  .stat-row span:last-child{ color:var(--white); font-weight:700; }
+
+  .odds-block{ margin: 16px 18px; padding: 14px; background: var(--bg-raised-2); border-radius:12px; }
+  .odds-title{ font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--grey-dim); font-weight:700; margin-bottom:10px; }
+  .odds-row{ display:flex; justify-content:space-between; font-size:14px; font-weight:700; padding:4px 0; }
+  .odds-row .ml{ color:var(--red); }
+
+  .sheet-status{ padding: 40px 20px; text-align:center; color:var(--grey); font-size:13px; }
+
+  @media (prefers-reduced-motion: no-preference){
+    .card{ animation: rise 0.4s ease backwards; }
+    .card:nth-child(2){ animation-delay: 0.05s; }
+    .card:nth-child(3){ animation-delay: 0.1s; }
+    @keyframes rise{ from{ opacity:0; transform: translateY(8px);} to{ opacity:1; transform: translateY(0);} }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="eyebrow">Live schedule · Irish time</span>
+    <h1>Fight Card</h1>
+  </div>
+  <button id="refresh" onclick="loadEvents()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    Refresh
+  </button>
+</header>
+
+<main id="app">
+  <div class="status" id="status">Loading fight cards…</div>
+</main>
+
+<footer>Data from ESPN · Tap any fight for fighter details &amp; odds where available</footer>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="bout-class" id="sheetClass">—</div>
+      <button id="closeSheet" onclick="closeSheet()">Close</button>
+    </div>
+    <div id="sheetBody"><div class="sheet-status">Loading fighter details…</div></div>
+  </div>
+</div>
+
+<script>
+const SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard";
+const IRISH_TZ = "Europe/Dublin";
+
+function fmtDateIrish(iso){
+  return new Date(iso).toLocaleDateString('en-IE', { weekday:'long', month:'long', day:'numeric', timeZone: IRISH_TZ });
+}
+function fmtTimeIrish(iso){
+  return new Date(iso).toLocaleTimeString('en-IE', { hour:'numeric', minute:'2-digit', timeZone: IRISH_TZ }) + " Irish time";
+}
+function isSameIrishDay(iso, refDate){
+  const opts = { timeZone: IRISH_TZ, year:'numeric', month:'2-digit', day:'2-digit' };
+  return new Date(iso).toLocaleDateString('en-CA', opts) === refDate.toLocaleDateString('en-CA', opts);
+}
+
+const pinIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+const clockIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>`;
+const chevronIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
+
+let CARD_GROUPS = [];
+
+function groupBouts(rawEvents){
+  const groups = {};
+  rawEvents.forEach(e => {
+    const comp = e.competitions && e.competitions[0];
+    if (!comp || !comp.competitors || comp.competitors.length < 2) return;
+
+    const venueName = comp.venue?.fullName || "Venue TBA";
+    const dayKey = new Date(e.date).toLocaleDateString('en-CA', { timeZone: IRISH_TZ });
+    const key = venueName + "_" + dayKey;
+
+    if (!groups[key]) groups[key] = { date: e.date, venue: venueName, location: [comp.venue?.address?.city, comp.venue?.address?.state || comp.venue?.address?.country].filter(Boolean).join(', '), bouts: [] };
+
+    groups[key].bouts.push({
+      className: e.competitions[0].type?.text || e.shortName?.split(':')[0] || "",
+      fighterA: comp.competitors[0]?.athlete?.shortName || comp.competitors[0]?.athlete?.displayName || "TBA",
+      fighterB: comp.competitors[1]?.athlete?.shortName || comp.competitors[1]?.athlete?.displayName || "TBA",
+      idA: comp.competitors[0]?.athlete?.id,
+      idB: comp.competitors[1]?.athlete?.id,
+      eventId: e.id,
+      order: e.competitions[0]?.order ?? 999
+    });
+  });
+
+  return Object.values(groups)
+    .map(g => { g.bouts.sort((a,b) => a.order - b.order); return g; })
+    .sort((a,b) => new Date(a.date) - new Date(b.date));
+}
+
+function render(groups){
+  const app = document.getElementById('app');
+  if (!groups.length){
+    app.innerHTML = `<div class="status">No upcoming fight cards found right now.</div>`;
+    return;
+  }
+
+  const now = new Date();
+  const firstFutureIdx = groups.findIndex(x => !isSameIrishDay(x.date, now));
+  let html = "";
+  let printedNextLabel = false;
+
+  groups.forEach((g, idx) => {
+    const headline = g.bouts[0];
+    const isToday = isSameIrishDay(g.date, now);
+
+    let label = "";
+    if (isToday) label = `<div class="section-label today">Today</div>`;
+    else if (!printedNextLabel){ label = `<div class="section-label">Next up</div>`; printedNextLabel = true; }
+    else if (idx === firstFutureIdx + 1) label = `<div class="section-label">Upcoming</div>`;
+
+    html += label;
+    html += `
+      <div class="card">
+        <div class="top">
+          ${isToday ? `<span class="badge">Today</span>` : ''}
+          <h2 class="headline">${headline.fighterA} vs ${headline.fighterB}</h2>
+          <div class="meta-row">
+            <span class="item">${clockIcon} ${fmtDateIrish(g.date)} · ${fmtTimeIrish(g.date)}</span>
+            <span class="item">${pinIcon} ${g.venue}${g.location ? ', ' + g.location : ''}</span>
+          </div>
+        </div>
+        <div class="bouts">
+          ${g.bouts.map((b, bi) => `
+            <div class="bout-row" onclick="openBout(${idx}, ${bi})">
+              <div>
+                <div class="bout-names">${b.fighterA} vs ${b.fighterB}</div>
+                ${b.className ? `<div class="bout-class">${b.className}</div>` : ''}
+              </div>
+              <div class="chevron">${chevronIcon}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  app.innerHTML = html;
+}
+
+async function loadEvents(){
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="status">Loading fight cards…</div>`;
+  try{
+    const res = await fetch(SCOREBOARD);
+    if (!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    const rawEvents = (data.events || []).filter(e => new Date(e.date) >= new Date(Date.now() - 1000*60*60*12));
+    CARD_GROUPS = groupBouts(rawEvents);
+    render(CARD_GROUPS);
+  } catch(err){
+    app.innerHTML = `<div class="status error">Couldn't load fight cards — check your connection and tap Refresh.</div>`;
+    console.error(err);
+  }
+}
+
+const overlay = document.getElementById('overlay');
+const sheetBody = document.getElementById('sheetBody');
+const sheetClass = document.getElementById('sheetClass');
+
+function closeSheet(){ overlay.classList.remove('open'); }
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSheet(); });
+
+async function fetchAthlete(id){
+  if (!id) return null;
+  try{
+    const res = await fetch(`https://site.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/${id}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.athlete || null;
+  } catch { return null; }
+}
+
+async function fetchOdds(eventId){
+  try{
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event=${eventId}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pick = data.pickcenter || (data.header?.competitions?.[0]?.odds);
+    return pick && pick.length ? pick[0] : null;
+  } catch { return null; }
+}
+
+function statRow(label, value){
+  return value ? `<div class="stat-row"><span>${label}</span><span>${value}</span></div>` : '';
+}
+
+function renderFighterCol(athlete, fallbackName){
+  if (!athlete){
+    return `<div class="fighter-col"><div class="fighter-name">${fallbackName}</div><div class="fighter-nick">Details unavailable</div></div>`;
+  }
+  const record = athlete.record?.items?.find(r => r.type === 'total') || athlete.record?.items?.[0];
+  const summary = record?.summary || "—";
+  const h = athlete.displayHeight || "";
+  const w = athlete.displayWeight || "";
+  const reach = athlete.reach ? `${athlete.reach}"` : "";
+  const age = athlete.age || "";
+  const stance = athlete.stance?.text || "";
+
+  return `
+    <div class="fighter-col">
+      <div class="fighter-name">${athlete.fullName || fallbackName}</div>
+      <div class="fighter-nick">${athlete.nickname ? '"' + athlete.nickname + '"' : (athlete.citizenship || '')}</div>
+      ${statRow('Record', summary)}
+      ${statRow('Height', h)}
+      ${statRow('Weight', w)}
+      ${statRow('Reach', reach)}
+      ${statRow('Age', age)}
+      ${statRow('Stance', stance)}
+    </div>
+  `;
+}
+
+async function openBout(groupIdx, boutIdx){
+  const g = CARD_GROUPS[groupIdx];
+  const b = g.bouts[boutIdx];
+  sheetClass.textContent = b.className || "Fight details";
+  sheetBody.innerHTML = `<div class="sheet-status">Loading fighter details…</div>`;
+  overlay.classList.add('open');
+
+  const [athleteA, athleteB, odds] = await Promise.all([
+    fetchAthlete(b.idA),
+    fetchAthlete(b.idB),
+    fetchOdds(b.eventId)
+  ]);
+
+  let oddsHtml = '';
+  if (odds && (odds.awayTeamOdds || odds.homeTeamOdds || odds.details)){
+    const aML = odds.awayTeamOdds?.moneyLine;
+    const hML = odds.homeTeamOdds?.moneyLine;
+    oddsHtml = `
+      <div class="odds-block">
+        <div class="odds-title">Betting odds${odds.provider?.name ? ' · ' + odds.provider.name : ''}</div>
+        ${aML || hML ? `
+          <div class="odds-row"><span>${b.fighterA}</span><span class="ml">${aML > 0 ? '+' : ''}${aML ?? '—'}</span></div>
+          <div class="odds-row"><span>${b.fighterB}</span><span class="ml">${hML > 0 ? '+' : ''}${hML ?? '—'}</span></div>
+        ` : `<div class="odds-row"><span>${odds.details || 'Odds not yet posted'}</span></div>`}
+      </div>
+    `;
+  } else {
+    oddsHtml = `<div class="odds-block"><div class="odds-title">Betting odds</div><div class="odds-row"><span>Not available yet for this fight</span></div></div>`;
+  }
+
+  sheetBody.innerHTML = `
+    <div class="fighters">
+      ${renderFighterCol(athleteA, b.fighterA)}
+      ${renderFighterCol(athleteB, b.fighterB)}
+    </div>
+    ${oddsHtml}
+  `;
+}
+
+loadEvents();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadEvents(); });
+</script>
+
+</body>
+</html>
